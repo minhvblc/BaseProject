@@ -4,6 +4,7 @@ struct ScaffoldConfiguration {
     let appDisplayName: String
     let targetName: String
     let bundleIdentifier: String
+    let useCocoaPods: Bool
 }
 
 enum TargetName {
@@ -70,4 +71,3 @@ enum BundleIdentifier {
         return trimmed
     }
 }
-

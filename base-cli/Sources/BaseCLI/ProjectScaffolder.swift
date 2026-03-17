@@ -2,7 +2,9 @@ import Foundation
 
 struct ScaffoldResult {
     let outputDirectory: URL
+    let podfile: URL
     let generatedProject: URL?
+    let generatedWorkspace: URL?
 }
 
 struct ProjectScaffolder {
@@ -11,6 +13,7 @@ struct ProjectScaffolder {
         templateRoot: URL,
         outputRoot: URL,
         skipGenerate: Bool,
+        skipPodInstall: Bool,
         force: Bool
     ) throws -> ScaffoldResult {
         let manifest = try loadManifest(from: templateRoot)
@@ -19,15 +22,35 @@ struct ProjectScaffolder {
         try replaceTokens(in: outputRoot, manifest: manifest, configuration: configuration)
         try validateResolvedPlaceholders(in: outputRoot, pattern: manifest.validation.placeholderPattern)
 
+        let podfileURL = outputRoot.appendingPathComponent("Podfile")
+        if configuration.useCocoaPods {
+            try writePodfile(at: podfileURL, configuration: configuration)
+            try configureCocoaPodsBuildSettings(in: outputRoot, configuration: configuration)
+        }
+
         let generatedProject: URL?
+        let generatedWorkspace: URL?
         if skipGenerate {
             generatedProject = nil
+            generatedWorkspace = nil
         } else {
             try runXcodeGen(in: outputRoot)
             generatedProject = outputRoot.appendingPathComponent("\(configuration.targetName).xcodeproj")
+
+            if configuration.useCocoaPods && !skipPodInstall {
+                try runPodInstall(in: outputRoot)
+                generatedWorkspace = outputRoot.appendingPathComponent("\(configuration.targetName).xcworkspace")
+            } else {
+                generatedWorkspace = nil
+            }
         }
 
-        return ScaffoldResult(outputDirectory: outputRoot, generatedProject: generatedProject)
+        return ScaffoldResult(
+            outputDirectory: outputRoot,
+            podfile: podfileURL,
+            generatedProject: generatedProject,
+            generatedWorkspace: generatedWorkspace
+        )
     }
 
     private func loadManifest(from templateRoot: URL) throws -> TemplateManifest {
@@ -180,6 +203,36 @@ struct ProjectScaffolder {
         }
     }
 
+    private func runPodInstall(in outputRoot: URL) throws {
+        let process = Process()
+        let stdout = Pipe()
+        let stderr = Pipe()
+
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["pod", "install"]
+        process.currentDirectoryURL = outputRoot
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        do {
+            try process.run()
+        } catch {
+            throw CLIError.runtime("Failed to launch CocoaPods. Install it with `brew install cocoapods` or rerun with `--skip-pod-install`.")
+        }
+
+        process.waitUntilExit()
+
+        let output = (
+            String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        ) + (
+            String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        )
+
+        if process.terminationStatus != 0 {
+            throw CLIError.runtime("pod install failed.\n\(output.trimmingCharacters(in: .whitespacesAndNewlines))")
+        }
+    }
+
     private func regularFiles(in root: URL) throws -> [URL] {
         let fileManager = FileManager.default
         guard let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey]) else {
@@ -239,5 +292,62 @@ struct ProjectScaffolder {
         }
 
         return fileComponents.dropFirst(rootComponents.count).joined(separator: "/")
+    }
+
+    private func writePodfile(at podfileURL: URL, configuration: ScaffoldConfiguration) throws {
+        let contents = """
+        platform :ios, '26.0'
+        project '\(configuration.targetName).xcodeproj'
+
+        target '\(configuration.targetName)' do
+          # Add your CocoaPods dependencies here.
+          # Example:
+          # pod 'Alamofire'
+        end
+
+        target '\(configuration.targetName)Tests' do
+          inherit! :search_paths
+        end
+        """
+
+        try contents.write(to: podfileURL, atomically: true, encoding: .utf8)
+    }
+
+    private func configureCocoaPodsBuildSettings(
+        in outputRoot: URL,
+        configuration: ScaffoldConfiguration
+    ) throws {
+        let baseXCConfigURL = outputRoot.appendingPathComponent("Config/Base.xcconfig")
+        var contents = try String(contentsOf: baseXCConfigURL, encoding: .utf8)
+
+        if contents.contains("ENABLE_USER_SCRIPT_SANDBOXING = YES") {
+            contents = contents.replacingOccurrences(
+                of: "ENABLE_USER_SCRIPT_SANDBOXING = YES",
+                with: "ENABLE_USER_SCRIPT_SANDBOXING = NO"
+            )
+        } else if !contents.contains("ENABLE_USER_SCRIPT_SANDBOXING = NO") {
+            contents += "\nENABLE_USER_SCRIPT_SANDBOXING = NO\n"
+        }
+
+        try contents.write(to: baseXCConfigURL, atomically: true, encoding: .utf8)
+
+        try addPodsIncludeIfNeeded(
+            to: outputRoot.appendingPathComponent("Config/Debug.xcconfig"),
+            includeLine: #"#include? "../Pods/Target Support Files/Pods-\#(configuration.targetName)/Pods-\#(configuration.targetName).debug.xcconfig""#
+        )
+        try addPodsIncludeIfNeeded(
+            to: outputRoot.appendingPathComponent("Config/Release.xcconfig"),
+            includeLine: #"#include? "../Pods/Target Support Files/Pods-\#(configuration.targetName)/Pods-\#(configuration.targetName).release.xcconfig""#
+        )
+    }
+
+    private func addPodsIncludeIfNeeded(to url: URL, includeLine: String) throws {
+        var contents = try String(contentsOf: url, encoding: .utf8)
+        guard !contents.contains(includeLine) else {
+            return
+        }
+
+        contents = includeLine + "\n" + contents
+        try contents.write(to: url, atomically: true, encoding: .utf8)
     }
 }

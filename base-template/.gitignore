@@ -3,7 +3,7 @@ DerivedData/
 build/
 *.xcodeproj
 *.xcworkspace
+Pods/
 xcuserdata/
 *.moved-aside
 *.xcuserstate
-

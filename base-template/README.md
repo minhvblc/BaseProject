@@ -8,6 +8,7 @@ Internal SwiftUI starter template backed by XcodeGen.
 - XcodeGen project spec at `project.yml`.
 - Layered build settings in `Config/Base.xcconfig`, `Config/Debug.xcconfig`, and `Config/Release.xcconfig`.
 - Build phase scripts in `Scripts/` for placeholder validation and optional SwiftLint.
+- Optional CocoaPods integration when scaffolded through `base-cli`.
 - Unit test target using Swift Testing.
 - `TemplateManifest.json` for the future scaffold CLI.
 
@@ -31,3 +32,8 @@ Replace these tokens before generating the project:
 - Keep this repo as `base-template`.
 - Build a separate `base-cli` that copies this template, replaces tokens, and runs XcodeGen.
 
+## CocoaPods
+
+When creating a project through `base-cli`, you can enable CocoaPods so the scaffold also emits a `Podfile` and can run `pod install`.
+
+If CocoaPods is enabled and installation runs successfully, open `__TARGET_NAME__.xcworkspace` instead of the Xcode project file.
