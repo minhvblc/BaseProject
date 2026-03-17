@@ -245,6 +245,7 @@ class ${formula_class} < Formula
   license ${license_ruby}
 
   depends_on "xcodegen"
+  depends_on "cocoapods"
 
   def install
     system "swift", "build", "--disable-sandbox", "--configuration", "release", "--product", "${formula_name}", "--package-path", "base-cli"
@@ -271,11 +272,14 @@ class ${formula_class} < Formula
       "--app-name", "Smoke App",
       "--target-name", "SmokeApp",
       "--bundle-id", "com.example.smokeapp",
+      "--with-cocoapods",
       "--output", output_path,
       "--skip-generate",
+      "--skip-pod-install",
       "--no-input"
 
     assert_path_exists output_path/"project.yml"
+    assert_path_exists output_path/"Podfile"
     assert_match "name: SmokeApp", (output_path/"project.yml").read
   end
 end
@@ -318,4 +322,3 @@ EOF
 echo "Wrote formula to ${formula_path}"
 echo "Wrote tap README to ${tap_readme_path}"
 echo "Resolved source revision: ${revision}"
-
