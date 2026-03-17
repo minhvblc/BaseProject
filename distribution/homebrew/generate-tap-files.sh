@@ -56,6 +56,21 @@ normalize_version() {
   printf '%s' "$1" | sed 's/^v//'
 }
 
+normalize_source_url() {
+  source_value="$1"
+
+  case "$source_value" in
+    git@*:* )
+      user_and_host="${source_value%%:*}"
+      repo_path="${source_value#*:}"
+      printf 'ssh://%s/%s\n' "$user_and_host" "$repo_path"
+      ;;
+    *)
+      printf '%s\n' "$source_value"
+      ;;
+  esac
+}
+
 formula_class_name() {
   printf '%s' "$1" | awk -F'[-_]' '{
     result = ""
@@ -89,6 +104,28 @@ resolve_revision() {
   fi
 
   die "Could not resolve revision for tag ${git_tag} from ${repo_url}"
+}
+
+resolve_default_tag() {
+  repo_url="$1"
+  normalized_version="$2"
+
+  prefixed_tag="v${normalized_version}"
+  unprefixed_tag="${normalized_version}"
+
+  if git ls-remote --exit-code --tags "$repo_url" "refs/tags/${prefixed_tag}" >/dev/null 2>&1 \
+    || git ls-remote --exit-code --tags "$repo_url" "refs/tags/${prefixed_tag}^{}" >/dev/null 2>&1; then
+    printf '%s\n' "$prefixed_tag"
+    return 0
+  fi
+
+  if git ls-remote --exit-code --tags "$repo_url" "refs/tags/${unprefixed_tag}" >/dev/null 2>&1 \
+    || git ls-remote --exit-code --tags "$repo_url" "refs/tags/${unprefixed_tag}^{}" >/dev/null 2>&1; then
+    printf '%s\n' "$unprefixed_tag"
+    return 0
+  fi
+
+  printf '%s\n' "$prefixed_tag"
 }
 
 license_literal() {
@@ -202,6 +239,8 @@ if [ -z "$source_url" ]; then
   source_url="https://github.com/${owner}/${source_repo}.git"
 fi
 
+source_url=$(normalize_source_url "$source_url")
+
 if [ -z "$homepage" ]; then
   if [ -n "$owner" ] && [ -n "$source_repo" ]; then
     homepage="https://github.com/${owner}/${source_repo}"
@@ -219,7 +258,7 @@ if [ -z "$tap_url" ]; then
 fi
 
 if [ -z "$tag" ]; then
-  tag="v${version}"
+  tag=$(resolve_default_tag "$source_url" "$version")
 fi
 
 if [ -z "$revision" ]; then
@@ -318,4 +357,3 @@ EOF
 echo "Wrote formula to ${formula_path}"
 echo "Wrote tap README to ${tap_readme_path}"
 echo "Resolved source revision: ${revision}"
-

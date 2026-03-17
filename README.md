@@ -26,6 +26,13 @@ cd base-cli
 swift run base new --app-name "Wallet Demo" --bundle-id "com.example.walletdemo"
 ```
 
+You can also pass the app name positionally:
+
+```bash
+cd base-cli
+swift run base new WalletDemo --bundle-id "com.example.walletdemo"
+```
+
 Useful options:
 
 - `--target-name`

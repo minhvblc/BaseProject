@@ -30,6 +30,13 @@ Why this setup:
   --tap-dir ~/src/homebrew-base
 ```
 
+By default the script now checks remote tags in this order:
+
+- `v<version>`
+- `<version>`
+
+So `--version 0.1.1` works whether your Git tag is `v0.1.1` or `0.1.1`. If you want to pin an exact tag name, pass `--tag`.
+
 If the source repo is private and your team uses SSH for GitHub, pass an explicit source URL:
 
 ```bash
@@ -41,6 +48,8 @@ If the source repo is private and your team uses SSH for GitHub, pass an explici
   --tap-dir ~/src/homebrew-base \
   --tap-url git@github.com:your-org/homebrew-base.git
 ```
+
+The script accepts scp-style Git SSH URLs like `git@github.com:your-org/base-project.git` and rewrites them to `ssh://git@github.com/your-org/base-project.git` inside the generated formula, because Homebrew requires a URI-style Git URL there.
 
 4. Commit and push the updated tap repo.
 
@@ -66,4 +75,3 @@ base new
 - The formula installs `xcodegen` as a dependency because `base new` generates the Xcode project after copying the template.
 - `swiftlint` stays optional. The generated template already skips the lint build phase if SwiftLint is not installed.
 - The formula test only runs `base new --skip-generate`; that keeps the Homebrew test fast while still proving that template copy and token replacement work.
-

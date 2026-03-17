@@ -43,9 +43,19 @@ struct NewCommand {
             case "--help", "-h":
                 command.showHelp = true
             default:
+                if argument.hasPrefix("--") {
+                    throw CLIError.usage("\(unknownOptionMessage(for: argument))\n\n\(helpText)")
+                }
+
                 if argument.hasPrefix("-") {
                     throw CLIError.usage("Unknown option '\(argument)'.\n\n\(helpText)")
                 }
+
+                if command.appName == nil {
+                    command.appName = argument
+                    break
+                }
+
                 throw CLIError.usage("Unexpected argument '\(argument)'.\n\n\(helpText)")
             }
 
@@ -148,11 +158,21 @@ struct NewCommand {
         return arguments[index]
     }
 
+    private static func unknownOptionMessage(for argument: String) -> String {
+        guard argument.count > 2 else {
+            return "Unknown option '\(argument)'."
+        }
+
+        let candidate = String(argument.dropFirst(2))
+        return "Unknown option '\(argument)'. If this is the app name, use `base new \(candidate)` or `base new --name \(candidate)`."
+    }
+
     private static let helpText = """
     Usage:
-      base new [options]
+      base new [<app-name>] [options]
 
     Options:
+      <app-name>                      Optional positional app display name.
       --app-name, --name <value>     App display name shown on the Home Screen.
       --target-name <value>          Xcode target, scheme, and module name.
       --bundle-id <value>            Bundle identifier, for example com.example.myapp.
@@ -164,4 +184,3 @@ struct NewCommand {
       -h, --help                     Show help.
     """
 }
-

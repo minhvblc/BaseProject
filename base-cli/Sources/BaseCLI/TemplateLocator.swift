@@ -1,7 +1,11 @@
 import Foundation
+import Darwin
 
 enum TemplateLocator {
-    static func resolveTemplateRoot(explicitPath: String?) throws -> URL {
+    static func resolveTemplateRoot(
+        explicitPath: String?,
+        executableURL: URL = currentExecutableURL()
+    ) throws -> URL {
         let fileManager = FileManager.default
 
         var candidates: [URL] = []
@@ -13,7 +17,6 @@ enum TemplateLocator {
             candidates.append(URL(fileURLWithPath: environmentPath, isDirectory: true))
         }
 
-        let executableURL = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
         let executableDirectory = executableURL.deletingLastPathComponent()
         candidates.append(executableDirectory.appendingPathComponent("../share/base-cli/template", isDirectory: true))
         candidates.append(executableDirectory.appendingPathComponent("../../share/base-cli/template", isDirectory: true))
@@ -54,5 +57,19 @@ enum TemplateLocator {
         let spec = url.appendingPathComponent("project.yml")
         return fileManager.fileExists(atPath: manifest.path) && fileManager.fileExists(atPath: spec.path)
     }
-}
 
+    private static func currentExecutableURL() -> URL {
+        var size: UInt32 = 0
+        _ = _NSGetExecutablePath(nil, &size)
+
+        var buffer = [CChar](repeating: 0, count: Int(size))
+        let result = _NSGetExecutablePath(&buffer, &size)
+        if result == 0 {
+            let pathBytes = buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+            let path = String(decoding: pathBytes, as: UTF8.self)
+            return URL(fileURLWithPath: path).resolvingSymlinksInPath()
+        }
+
+        return URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    }
+}
