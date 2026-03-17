@@ -1,0 +1,9 @@
+included:
+  - App/Sources
+  - Tests
+
+excluded:
+  - App/Resources
+
+reporter: "xcode"
+

@@ -1,0 +1,37 @@
+{
+  "name": "base-template",
+  "templateVersion": "0.1.0",
+  "placeholders": [
+    {
+      "key": "appDisplayName",
+      "token": "__APP_DISPLAY_NAME__",
+      "description": "Name shown on the Home Screen."
+    },
+    {
+      "key": "targetName",
+      "token": "__TARGET_NAME__",
+      "description": "Xcode target, scheme, module, and project name."
+    },
+    {
+      "key": "bundleIdentifier",
+      "token": "__BUNDLE_ID__",
+      "description": "Bundle identifier for the application target."
+    }
+  ],
+  "textReplaceGlobs": [
+    "README.md",
+    "TemplateManifest.json",
+    "project.yml",
+    "Config/**/*.xcconfig",
+    "App/**/*.swift",
+    "App/**/*.plist",
+    "Tests/**/*.swift"
+  ],
+  "validation": {
+    "placeholderPattern": "__[A-Z0-9_]+__",
+    "buildPhaseScript": "Scripts/check-placeholders.sh"
+  },
+  "postScaffoldCommands": [
+    "Scripts/generate.sh"
+  ]
+}

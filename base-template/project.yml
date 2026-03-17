@@ -1,0 +1,54 @@
+name: __TARGET_NAME__
+
+options:
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: en
+
+targets:
+  __TARGET_NAME__:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Sources
+      - path: App/Resources
+        excludes:
+          - Info.plist
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
+    settings:
+      base:
+        INFOPLIST_FILE: App/Resources/Info.plist
+        PRODUCT_NAME: $(TARGET_NAME)
+        SWIFT_EMIT_LOC_STRINGS: YES
+    preBuildScripts:
+      - path: Scripts/check-placeholders.sh
+        name: Validate Template Tokens
+        basedOnDependencyAnalysis: false
+    postCompileScripts:
+      - path: Scripts/swiftlint.sh
+        name: SwiftLint
+        basedOnDependencyAnalysis: false
+    scheme:
+      testTargets:
+        - __TARGET_NAME__Tests
+      gatherCoverageData: true
+      coverageTargets:
+        - __TARGET_NAME__
+
+  __TARGET_NAME__Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/Unit
+    dependencies:
+      - target: __TARGET_NAME__
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE_ID__.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_EMIT_LOC_STRINGS: NO
