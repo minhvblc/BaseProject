@@ -35,6 +35,8 @@ swift run base new WalletDemo --bundle-id "com.example.walletdemo"
 
 Useful options:
 
+- `--with-cocoapods`
+- `--skip-pod-install`
 - `--target-name`
 - `--output`
 - `--template`
@@ -69,3 +71,29 @@ Recommended user flow:
 brew install your-org/homebrew-base/base
 base new
 ```
+
+If the app should start with CocoaPods:
+
+```bash
+base new --with-cocoapods
+```
+
+## Testing the generator
+
+Quick smoke test without CocoaPods:
+
+```bash
+./scripts/test-generation.sh
+```
+
+Smoke test with CocoaPods enabled:
+
+```bash
+./scripts/test-generation.sh --with-cocoapods
+```
+
+What this does:
+
+- runs `swift test` in `base-cli`
+- scaffolds a real sample app via `base new`
+- builds the generated `.xcodeproj` or `.xcworkspace` with `xcodebuild`

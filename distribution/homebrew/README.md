@@ -72,6 +72,6 @@ base new
 
 ## Notes
 
-- The formula installs `xcodegen` as a dependency because `base new` generates the Xcode project after copying the template.
+- The formula installs both `xcodegen` and `cocoapods`, so the generated CLI can scaffold either plain XcodeGen projects or CocoaPods-based projects without extra setup.
 - `swiftlint` stays optional. The generated template already skips the lint build phase if SwiftLint is not installed.
-- The formula test only runs `base new --skip-generate`; that keeps the Homebrew test fast while still proving that template copy and token replacement work.
+- The formula test runs `base new --with-cocoapods --skip-generate --skip-pod-install`; that keeps the Homebrew test fast while still proving token replacement and Podfile generation.

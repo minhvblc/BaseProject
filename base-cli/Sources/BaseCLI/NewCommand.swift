@@ -6,7 +6,9 @@ struct NewCommand {
     var bundleID: String?
     var outputPath: String?
     var templatePath: String?
+    var withCocoaPods: Bool?
     var skipGenerate = false
+    var skipPodInstall = false
     var force = false
     var noInput = false
     var showHelp = false
@@ -34,8 +36,14 @@ struct NewCommand {
             case "--template":
                 index += 1
                 command.templatePath = try value(for: argument, at: index, in: arguments)
+            case "--with-cocoapods", "--cocoapods":
+                command.withCocoaPods = true
+            case "--without-cocoapods":
+                command.withCocoaPods = false
             case "--skip-generate":
                 command.skipGenerate = true
+            case "--skip-pod-install":
+                command.skipPodInstall = true
             case "--force":
                 command.force = true
             case "--no-input":
@@ -82,14 +90,23 @@ struct NewCommand {
             templateRoot: templateRoot,
             outputRoot: outputURL,
             skipGenerate: skipGenerate,
+            skipPodInstall: skipPodInstall,
             force: force
         )
 
         Terminal.output("Created \(config.targetName) at \(result.outputDirectory.path)")
         if let generatedProject = result.generatedProject {
             Terminal.output("Generated Xcode project: \(generatedProject.path)")
+        } else if config.useCocoaPods {
+            Terminal.output("Podfile created at \(result.podfile.path)")
         } else {
             Terminal.output("Skipped project generation. Run `xcodegen generate` inside the project directory when ready.")
+        }
+
+        if let generatedWorkspace = result.generatedWorkspace {
+            Terminal.output("Generated CocoaPods workspace: \(generatedWorkspace.path)")
+        } else if config.useCocoaPods {
+            Terminal.output("CocoaPods enabled. Run `pod install` and open \(config.targetName).xcworkspace when ready.")
         }
     }
 
@@ -111,11 +128,13 @@ struct NewCommand {
                 required: true
             )
         )
+        let resolvedUseCocoaPods = promptCocoaPods(defaultValue: false)
 
         return ScaffoldConfiguration(
             appDisplayName: resolvedAppName,
             targetName: resolvedTargetName,
-            bundleIdentifier: resolvedBundleID
+            bundleIdentifier: resolvedBundleID,
+            useCocoaPods: resolvedUseCocoaPods
         )
     }
 
@@ -150,6 +169,18 @@ struct NewCommand {
         return Terminal.prompt(label, defaultValue: defaultValue) ?? ""
     }
 
+    private func promptCocoaPods(defaultValue: Bool) -> Bool {
+        if let withCocoaPods {
+            return withCocoaPods
+        }
+
+        if noInput {
+            return defaultValue
+        }
+
+        return Terminal.confirm("Use CocoaPods?", defaultValue: defaultValue)
+    }
+
     private static func value(for option: String, at index: Int, in arguments: [String]) throws -> String {
         guard index < arguments.count else {
             throw CLIError.usage("Missing value for '\(option)'.\n\n\(helpText)")
@@ -178,7 +209,10 @@ struct NewCommand {
       --bundle-id <value>            Bundle identifier, for example com.example.myapp.
       --output <path>                Output directory. Defaults to ./<TargetName>.
       --template <path>              Override template path.
+      --with-cocoapods, --cocoapods  Create a Podfile and, by default, run `pod install`.
+      --without-cocoapods            Explicitly skip CocoaPods setup.
       --skip-generate                Copy and replace tokens, but skip `xcodegen generate`.
+      --skip-pod-install             Keep the Podfile but skip `pod install`.
       --force                        Replace the output directory if it already exists.
       --no-input                     Disable interactive prompts. Missing values become validation errors.
       -h, --help                     Show help.
