@@ -37,6 +37,7 @@ struct ProjectScaffolderTests {
 
         #expect(specContents.contains("name: BaseDemo"))
         #expect(!specContents.contains("__TARGET_NAME__"))
+        #expect(plistContents.contains("$(PRODUCT_BUNDLE_IDENTIFIER)"))
         #expect(plistContents.contains("Base Demo"))
         #expect(!plistContents.contains("__APP_DISPLAY_NAME__"))
         #expect(result.generatedProject == nil)
